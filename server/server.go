@@ -2,19 +2,16 @@ package server
 
 import (
 	"context"
-	"io"
 	"log"
 	"net"
 	"regexp"
-	"strings"
+
+	"github.com/arianvp/systemd-creds/store"
 )
 
-type CredStore interface {
-	Get(unitName, credID string) (string, error)
-}
-
 func parsePeerName(s string) (string, string, bool) {
-	matches := regexp.MustCompile("^\x00.*/unit/(.*)/(.*)$").FindStringSubmatch(s)
+	// Apparently in Go abtract socket names are prefixed with @ instead of 0x00
+	matches := regexp.MustCompile("^@.*/unit/(.*)/(.*)$").FindStringSubmatch(s)
 	if matches == nil {
 		return "", "", false
 	}
@@ -36,22 +33,29 @@ func (s *Server) Start(ctx context.Context, connChan <-chan net.Conn) {
 
 func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 	defer conn.Close()
-	unitName, credID, ok := parsePeerName(conn.RemoteAddr().String())
+
+	unixAddr, ok := conn.RemoteAddr().(*net.UnixAddr)
 	if !ok {
-		log.Printf("Failed to parse peer name: %s", conn.RemoteAddr().String())
+		log.Printf("Failed to get peer name: %s", unixAddr.Name)
 		return
 	}
-	cred, err := s.Store.Get(unitName, credID)
+
+	unitName, credID, ok := parsePeerName(unixAddr.Name)
+	if !ok {
+		log.Printf("Failed to parse peer name: %s", unixAddr.Name)
+		return
+	}
+	cred, err := s.Store.Get(ctx, unitName, credID)
 	if err != nil {
 		log.Printf("Failed to get credential: %v", err)
 		return
 	}
-	if _, err := io.Copy(conn, strings.NewReader(cred)); err != nil {
+	if _, err := conn.Write([](byte)(cred)); err != nil {
 		log.Printf("Failed to write credential: %v", err)
 		return
 	}
 }
 
 type Server struct {
-	Store CredStore
+	Store store.CredStore
 }

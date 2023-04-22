@@ -9,7 +9,9 @@ import (
 	"os/signal"
 
 	"github.com/arianvp/systemd-creds/server"
+	"github.com/arianvp/systemd-creds/store"
 	"github.com/coreos/go-systemd/v22/activation"
+	"github.com/coreos/go-systemd/v22/daemon"
 	"golang.org/x/sys/unix"
 )
 
@@ -60,11 +62,17 @@ func run() int {
 		}(l)
 	}
 
-	s := server.Server{
-		Store: nil, // TODO: Store
+	vaultStore, err := store.NewVault()
+	if err := vaultStore.Login(ctx); err != nil {
+		log.Print(err)
+		return 1
 	}
+	defer vaultStore.Stop() // stop renewing token
+
+	s := server.Server{Store: vaultStore}
 
 	go s.Start(ctx, connChan)
+	daemon.SdNotify(false, daemon.SdNotifyReady)
 	<-ctx.Done()
 	return 0
 }
