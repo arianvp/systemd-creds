@@ -29,3 +29,6 @@ func TestParsePeerNameExampleFails(t *testing.T) {
 		t.Errorf("Expected empty string, got %s", credID)
 	}
 }
+
+func TestStartServerCancel(t *testing.T) {
+}

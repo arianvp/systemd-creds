@@ -10,8 +10,10 @@ import (
 )
 
 type Vault struct {
-	client  vault.Client
-	watcher *vault.LifetimeWatcher
+	ApproleRoleID       string
+	ApproleSecretIDFile string
+	client              vault.Client
+	watcher             *vault.LifetimeWatcher
 }
 
 func (v *Vault) Get(ctx context.Context, unitName, credID string) (string, error) {
@@ -38,13 +40,20 @@ func NewVault() (*Vault, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Vault{client: *client}, nil
+	return &Vault{
+		ApproleRoleID:       os.Getenv("VAULT_APPROLE_ROLE_ID"),
+		ApproleSecretIDFile: os.Getenv("VAULT_APPROLE_SECRET_ID_FILE"),
+		client:              *client,
+		watcher:             &vault.LifetimeWatcher{},
+	}, nil
 }
 
 func (v *Vault) Login(ctx context.Context) error {
-	approleAuth, err := approle.NewAppRoleAuth(os.Getenv("APPROLE_ROLE_ID"), &approle.SecretID{
-		FromFile: os.Getenv("APPROLE_SECRET_ID_FILE"),
-	}, approle.WithWrappingToken())
+	approleAuth, err := approle.NewAppRoleAuth(
+		v.ApproleRoleID,
+		&approle.SecretID{FromFile: v.ApproleSecretIDFile},
+		approle.WithWrappingToken(),
+	)
 	if err != nil {
 		return err
 	}

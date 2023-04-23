@@ -67,7 +67,7 @@ func run() int {
 		log.Print(err)
 		return 1
 	}
-	defer vaultStore.Stop() // stop renewing token
+	defer vaultStore.Stop()
 
 	s := server.Server{Store: vaultStore}
 

@@ -1,7 +1,7 @@
 [Service]
 Type=notify
 Environment=VAULT_ADDR=http://127.0.0.1:8200
-Environment=APPROLE_ROLE_ID=462cd965-ecf1-6ce2-ae50-f91bde23e001
-Environment=APPROLE_SECRET_ID_FILE=%d/approle-secret-id
+Environment=VAULT_APPROLE_ROLE_ID=462cd965-ecf1-6ce2-ae50-f91bde23e001
+Environment=VAULT_APPROLE_SECRET_ID_FILE=%d/approle-secret-id
 LoadCredential=approle-secret-id
 ExecStart=/mnt/Projects/systemd-creds/systemd-creds
